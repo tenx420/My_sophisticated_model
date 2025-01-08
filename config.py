@@ -1,7 +1,5 @@
 # config.py
-import os
-
-API_KEY = os.getenv("POLYGON_API_KEY", "fDLhW6xHMAEyG9daMWLUQouqrpLV4TVd")
+from api_keys import POLYGON_API_KEY
 
 # Which ticker to model? For a broad market proxy, we might use SPY.
 # You can adapt to e.g. QQQ, or a basket of symbols.

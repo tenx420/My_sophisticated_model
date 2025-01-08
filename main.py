@@ -1,5 +1,9 @@
 import os
 import openai
+import schedule
+import time
+import pandas as pd
+from datetime import datetime
 
 from market_status import is_market_open
 from config import TARGET_TICKER, BACKTEST_DAYS
@@ -12,20 +16,47 @@ from analysis import analyze_current_spy_and_vxx
 # NEW: Import functions from post_to_discord.py
 from post_to_discord import generate_report, create_report_image, post_image_to_discord
 
+# Import API keys
+from api_keys import OPENAI_API_KEY, DISCORD_WEBHOOK_URL
+
 ##############################################
 #  SET YOUR OPENAI API KEY
 ##############################################
 # Instantiate the OpenAI client
-client = openai.Client(api_key=os.getenv(
-    "OPENAI_API_KEY",
-    ""
-))
+client = openai.Client(api_key=OPENAI_API_KEY)
 
-# OPTIONAL: Replace with your actual Discord webhook URL
-DISCORD_WEBHOOK_URL = os.getenv(
-    "DISCORD_WEBHOOK_URL",
-    "https://discord.com/api/webhooks/1325728507938213969/wvDTSWiEuMXPL4VyzEdkIJSYsfccOtf4OZV8kIcc11yHLeT3nPpFMhpfWwFFWWAC7ZHL"
-)
+def save_data_to_csv(data, filename="historical_data.csv"):
+    """
+    Save the given data to a CSV file.
+    """
+    df = pd.DataFrame(data)
+    if os.path.exists(filename):
+        df.to_csv(filename, mode='a', header=False, index=False)
+    else:
+        df.to_csv(filename, mode='w', header=True, index=False)
+
+def fetch_and_save_data():
+    """
+    Fetch data, calculate TA indicators, and save to CSV.
+    """
+    if not is_market_open():
+        print("Market is not open now. Skipping data fetch.")
+        return
+
+    print(f"=== Fetching daily data for {TARGET_TICKER} ===")
+    df_raw = fetch_daily_data(TARGET_TICKER)
+    if df_raw.empty:
+        print(f"No data returned for {TARGET_TICKER}. Exiting.")
+        return
+
+    print("=== Building features ===")
+    df_feat = build_features(df_raw)
+    if df_feat.empty:
+        print("No data after building features. Exiting.")
+        return
+
+    # Save the data to CSV
+    save_data_to_csv(df_feat)
 
 def main():
     # 1) Check if market is open
@@ -132,7 +163,7 @@ for a trader or hedge fund in this scenario. Assume they have moderate risk tole
     # Generate a human-readable report
     report = generate_report(weekly_data, daily_data)
     
-      # Generate report as an image with color-coded support/resistance levels
+    # Generate report as an image with color-coded support/resistance levels
     report_image_path = "report.png"
     create_report_image(
         report, 
@@ -147,10 +178,18 @@ for a trader or hedge fund in this scenario. Assume they have moderate risk tole
 
     
     # Post the report image to Discord
-    if "discord.com/api/webhooks" in DISCORD_WEBHOOK_URL:
-        post_image_to_discord(report_image_path, DISCORD_WEBHOOK_URL)
-    else:
-        print("Discord Webhook URL not set or invalid. Skipping Discord post.")
+    # if "discord.com/api/webhooks" in DISCORD_WEBHOOK_URL:
+    #     post_image_to_discord(report_image_path, DISCORD_WEBHOOK_URL)
+    # else:
+    #     print("Discord Webhook URL not set or invalid. Skipping Discord post.")
+
+    # Schedule the fetch_and_save_data function to run every hour during market hours
+    schedule.every().hour.at(":00").do(fetch_and_save_data)
+
+    print("=== Starting the scheduler ===")
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
 
 if __name__ == "__main__":
     main()

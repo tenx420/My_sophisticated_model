@@ -2,7 +2,8 @@
 import requests
 import pandas as pd
 from datetime import datetime, timedelta
-from config import API_KEY, TARGET_TICKER, TRAINING_LOOKBACK_DAYS
+from api_keys import POLYGON_API_KEY
+from config import TARGET_TICKER, TRAINING_LOOKBACK_DAYS
 
 def fetch_daily_data(symbol, lookback_days=TRAINING_LOOKBACK_DAYS):
     """
@@ -18,7 +19,7 @@ def fetch_daily_data(symbol, lookback_days=TRAINING_LOOKBACK_DAYS):
         "adjusted": "true",
         "sort": "asc",
         "limit": 50000,
-        "apiKey": API_KEY
+        "apiKey": POLYGON_API_KEY
     }
     try:
         r = requests.get(url, params=params)
