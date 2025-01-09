@@ -91,12 +91,17 @@ def plot_historical_data(symbols):
     for symbol in symbols:
         df = read_data_from_csv(symbol)
         if not df.empty:
-            df['date'] = pd.to_datetime(df['date'])
-            plt.plot(df['date'], df['close'], label=symbol)
+            print(f"Columns in {symbol} data: {df.columns}")  # Debugging line
+            if 'Timestamp' in df.columns:
+                df['date'] = pd.to_datetime(df['Timestamp'], unit='ms')
+                plt.plot(df['date'], df['Close'], label=symbol)
+            else:
+                print(f"'Timestamp' column not found in {symbol} data")
     plt.xlabel('Date')
     plt.ylabel('Close Price')
     plt.title('Historical Data')
     plt.legend()
+    plt.savefig('historical_data.png')
     plt.show()
 
 def predict_future(symbol, periods=180):
@@ -107,7 +112,12 @@ def predict_future(symbol, periods=180):
     if df.empty:
         return None
 
-    df = df[['date', 'close']]
+    if 'Timestamp' not in df.columns or 'Close' not in df.columns:
+        print(f"'Timestamp' or 'Close' column not found in {symbol} data")
+        return None
+
+    df['date'] = pd.to_datetime(df['Timestamp'], unit='ms')
+    df = df[['date', 'Close']]
     df.columns = ['ds', 'y']
     model = Prophet()
     model.fit(df)
@@ -128,6 +138,7 @@ def plot_predictions(symbols, periods=180):
     plt.ylabel('Predicted Close Price')
     plt.title('Predictions for Next Few Months')
     plt.legend()
+    plt.savefig('predictions.png')
     plt.show()
 
 def main():
@@ -216,12 +227,12 @@ for a trader or hedge fund in this scenario. Assume they have moderate risk tole
     except Exception as e:
         ai_text = f"Error calling OpenAI ChatCompletion: {e}"
         print(ai_text)
-    
+
     print("\nAll done!")
 
     # 5) Post Summary as an Image to Discord
     print("=== Preparing Summary ===")
-    
+
     # Build weekly_data/daily_data from the above results
     weekly_data = {
         "trend": results['market_trend'],
@@ -254,20 +265,20 @@ for a trader or hedge fund in this scenario. Assume they have moderate risk tole
         }
     )
 
-    
-    # Post the report image to Discord
+    # # Post the report image to Discord
     # if "discord.com/api/webhooks" in DISCORD_WEBHOOK_URL:
     #     post_image_to_discord(report_image_path, DISCORD_WEBHOOK_URL)
     # else:
     #     print("Discord Webhook URL not set or invalid. Skipping Discord post.")
 
+    # Comment out the scheduler code
     # Schedule the fetch_and_save_data function to run every hour during market hours
-    schedule.every().hour.at(":00").do(fetch_and_save_data)
+    # schedule.every().hour.at(":00").do(fetch_and_save_data)
 
-    print("=== Starting the scheduler ===")
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    # print("=== Starting the scheduler ===")
+    # while True:
+    #     schedule.run_pending()
+    #     time.sleep(1)
 
 if __name__ == "__main__":
     main()

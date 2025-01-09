@@ -8,3 +8,4 @@ Pillow
 schedule
 matplotlib
 prophet
+plotly
