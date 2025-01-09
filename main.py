@@ -4,6 +4,8 @@ import schedule
 import time
 import pandas as pd
 from datetime import datetime
+import matplotlib.pyplot as plt
+from prophet import Prophet
 
 from market_status import is_market_open
 from config import TARGET_TICKER, BACKTEST_DAYS
@@ -69,6 +71,64 @@ def save_data_for_symbols(symbols):
             save_data_to_csv(df, f"{symbol.lower()}_data.csv")
         else:
             print(f"No data for {symbol}.")
+
+def read_data_from_csv(symbol):
+    """
+    Read data from CSV file for the given symbol.
+    """
+    filename = f"{symbol.lower()}_data.csv"
+    if os.path.exists(filename):
+        return pd.read_csv(filename)
+    else:
+        print(f"No CSV file found for {symbol}.")
+        return pd.DataFrame()
+
+def plot_historical_data(symbols):
+    """
+    Plot historical data for the given symbols.
+    """
+    plt.figure(figsize=(14, 7))
+    for symbol in symbols:
+        df = read_data_from_csv(symbol)
+        if not df.empty:
+            df['date'] = pd.to_datetime(df['date'])
+            plt.plot(df['date'], df['close'], label=symbol)
+    plt.xlabel('Date')
+    plt.ylabel('Close Price')
+    plt.title('Historical Data')
+    plt.legend()
+    plt.show()
+
+def predict_future(symbol, periods=180):
+    """
+    Predict the future prices for the given symbol using Prophet.
+    """
+    df = read_data_from_csv(symbol)
+    if df.empty:
+        return None
+
+    df = df[['date', 'close']]
+    df.columns = ['ds', 'y']
+    model = Prophet()
+    model.fit(df)
+    future = model.make_future_dataframe(periods=periods)
+    forecast = model.predict(future)
+    return forecast
+
+def plot_predictions(symbols, periods=180):
+    """
+    Plot predictions for the given symbols.
+    """
+    plt.figure(figsize=(14, 7))
+    for symbol in symbols:
+        forecast = predict_future(symbol, periods)
+        if forecast is not None:
+            plt.plot(forecast['ds'], forecast['yhat'], label=f"{symbol} Prediction")
+    plt.xlabel('Date')
+    plt.ylabel('Predicted Close Price')
+    plt.title('Predictions for Next Few Months')
+    plt.legend()
+    plt.show()
 
 def main():
     # Save SPY, VXX, GLD, and OXY data before running the scheduler
@@ -211,3 +271,9 @@ for a trader or hedge fund in this scenario. Assume they have moderate risk tole
 
 if __name__ == "__main__":
     main()
+
+    # Plot historical data
+    plot_historical_data(["SPY", "VXX", "GLD", "OXY"])
+
+    # Plot predictions for the next few months
+    plot_predictions(["SPY", "VXX", "GLD", "OXY"])
