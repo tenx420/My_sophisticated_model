@@ -58,7 +58,25 @@ def fetch_and_save_data():
     # Save the data to CSV
     save_data_to_csv(df_feat)
 
+def save_data_for_symbols(symbols):
+    """
+    Fetch and save data for given symbols to CSV.
+    """
+    for symbol in symbols:
+        print(f"=== Fetching and saving {symbol} data ===")
+        df = fetch_daily_data(symbol)
+        if not df.empty:
+            save_data_to_csv(df, f"{symbol.lower()}_data.csv")
+        else:
+            print(f"No data for {symbol}.")
+
 def main():
+    # Save SPY, VXX, GLD, and OXY data before running the scheduler
+    save_data_for_symbols(["SPY", "VXX", "GLD", "OXY"])
+
+    # Prompt the user to run the scheduler
+    input("Press Enter to start the scheduler...")
+
     # 1) Check if market is open
     print("=== Checking if market is open ===")
     if not is_market_open():
